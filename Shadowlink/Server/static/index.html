@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Shadowlink</title>
+    <style>
+        /* Theme tokens for the black/green tactical interface. */
+        :root {
+            color-scheme: dark;
+            --bg: #050805;
+            --panel: #0b120c;
+            --panel-strong: #101b11;
+            --line: #24452a;
+            --line-hot: #40ff72;
+            --text: #d9ffe1;
+            --muted: #82a88a;
+            --field: #020502;
+            --danger: #ff5f5f;
+        }
+
+        /* Global layout and typography. */
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background:
+                linear-gradient(rgba(64, 255, 114, 0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(64, 255, 114, 0.035) 1px, transparent 1px),
+                radial-gradient(circle at 50% -10%, rgba(38, 117, 48, 0.24), transparent 34rem),
+                var(--bg);
+            background-size: 28px 28px, 28px 28px, auto, auto;
+            color: var(--text);
+            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 2rem auto;
+            max-width: 860px;
+            padding: 0 1rem;
+        }
+
+        h1,
+        h2 {
+            letter-spacing: 0;
+            margin-bottom: 0.35rem;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            color: var(--line-hot);
+            font-size: 1.8rem;
+            text-shadow: 0 0 18px rgba(64, 255, 114, 0.35);
+        }
+
+        h2 {
+            color: #a8ffb8;
+            font-size: 0.95rem;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-top: 1rem;
+            text-transform: uppercase;
+            color: #baffc8;
+            font-size: 0.78rem;
+        }
+
+        /* Shared form controls. */
+        input,
+        textarea,
+        button {
+            font: inherit;
+            margin-top: 0.35rem;
+            width: 100%;
+        }
+
+        input,
+        textarea {
+            background: var(--field);
+            border: 1px solid var(--line);
+            color: var(--text);
+            outline: none;
+            padding: 0.72rem 0.8rem;
+        }
+
+        input:focus,
+        textarea:focus {
+            border-color: var(--line-hot);
+            box-shadow: 0 0 0 2px rgba(64, 255, 114, 0.16);
+        }
+
+        input::placeholder,
+        textarea::placeholder {
+            color: #54735a;
+        }
+
+        textarea {
+            min-height: 7rem;
+            resize: vertical;
+        }
+
+        button {
+            background: linear-gradient(180deg, #163d1c, #0b2210);
+            border: 1px solid #3fe66b;
+            color: var(--text);
+            cursor: pointer;
+            font-weight: 700;
+            padding: 0.6rem 0.8rem;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: linear-gradient(180deg, #1d5526, #0e2d15);
+            box-shadow: 0 0 16px rgba(64, 255, 114, 0.18);
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        /* Top status bar with logout control. */
+        .topbar {
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            margin-bottom: 1.25rem;
+            padding-bottom: 1rem;
+        }
+
+        .topbar button {
+            max-width: 9rem;
+        }
+
+        /* Main messenger layout: side selector plus chat pane. */
+        .layout {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: 260px minmax(0, 1fr);
+            min-height: 640px;
+        }
+
+        /* Reusable framed surfaces. */
+        .panel {
+            background: rgba(11, 18, 12, 0.92);
+            border: 1px solid var(--line);
+            box-shadow: inset 0 0 0 1px rgba(64, 255, 114, 0.04), 0 18px 40px rgba(0, 0, 0, 0.28);
+            padding: 1rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* Recipient and group buttons in the side panel. */
+        .user-button {
+            background: #071009;
+            border: 1px solid var(--line);
+            color: var(--text);
+            margin: 0.35rem 0 0;
+            padding: 0.5rem;
+            text-align: left;
+            text-transform: none;
+        }
+
+        .user-button[aria-pressed="true"] {
+            background: #112d16;
+            border-color: var(--line-hot);
+            font-weight: 700;
+        }
+
+        .presence {
+            color: #16803a;
+            float: right;
+            font-size: 0.8rem;
+        }
+
+        .presence.inactive {
+            color: #777;
+        }
+
+        .user-group {
+            border-bottom: 1px solid rgba(64, 255, 114, 0.18);
+            color: var(--muted);
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin: 0.75rem 0 0.25rem;
+            padding-bottom: 0.25rem;
+            text-transform: uppercase;
+        }
+
+        /* Group creation and history filter controls. */
+        .side-actions {
+            display: grid;
+            gap: 0.5rem;
+            grid-template-columns: 1fr;
+            margin: 0.75rem 0;
+        }
+
+        .secondary-button {
+            background: #071009;
+            border-color: var(--line);
+            color: #baffc8;
+        }
+
+        .filter-pill {
+            align-items: center;
+            background: rgba(64, 255, 114, 0.08);
+            border: 1px solid rgba(64, 255, 114, 0.2);
+            color: var(--muted);
+            display: flex;
+            justify-content: space-between;
+            margin: 0.7rem 0;
+            padding: 0.55rem 0.65rem;
+        }
+
+        /* Login/create-account split screen. */
+        .auth-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .auth-card {
+            background: rgba(7, 16, 9, 0.72);
+            border: 1px solid rgba(64, 255, 114, 0.16);
+            padding: 1rem;
+        }
+
+        .check-row {
+            align-items: center;
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .check-row input {
+            margin: 0;
+            width: auto;
+        }
+
+        #identity,
+        #status,
+        #loginStatus {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        #identity::before {
+            color: var(--line-hot);
+            content: "STATUS: ";
+            font-weight: 700;
+        }
+
+        /* Message list and individual message rows. */
+        #messages {
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            gap: 0.55rem;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            background: rgba(7, 16, 9, 0.76);
+            border: 1px solid rgba(64, 255, 114, 0.16);
+            margin-bottom: 0.55rem;
+            padding: 0.7rem;
+        }
+
+        .meta {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Secure-channel labels on the main surfaces. */
+        #loginPanel,
+        main,
+        aside {
+            position: relative;
+        }
+
+        #loginPanel::before,
+        main::before,
+        aside::before {
+            color: rgba(64, 255, 114, 0.52);
+            content: "SECURE CHANNEL";
+            font-size: 0.68rem;
+            font-weight: 800;
+            position: absolute;
+            right: 0.75rem;
+            top: 0.65rem;
+        }
+
+        /* Main chat pane and fixed composer area. */
+        main {
+            background: rgba(11, 18, 12, 0.88);
+            border: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            min-height: 640px;
+            padding: 0;
+        }
+
+        aside {
+            background: rgba(11, 18, 12, 0.88);
+            border: 1px solid var(--line);
+            padding: 1rem;
+        }
+
+        aside .panel {
+            background: transparent;
+            box-shadow: none;
+        }
+
+        .chat-header {
+            border-bottom: 1px solid var(--line);
+            padding: 1rem;
+        }
+
+        .composer {
+            background: rgba(2, 5, 2, 0.92);
+            border-top: 1px solid var(--line);
+            padding: 1rem;
+        }
+
+        .composer textarea {
+            min-height: 5.5rem;
+        }
+
+        @media (max-width: 760px) {
+            .layout,
+            .auth-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- App header shows locked/unlocked state and the logout action. -->
+    <div class="topbar">
+        <div>
+            <h1>Shadowlink</h1>
+            <p id="identity">Locked</p>
+        </div>
+        <button id="logoutButton" class="hidden" type="button">Logout</button>
+    </div>
+
+    <!-- Locked screen: creating a local encrypted identity is separate from login. -->
+    <section id="loginPanel" class="panel">
+        <div class="auth-grid">
+            <div class="auth-card">
+                <h2>Create Account</h2>
+                <label for="createUsername">Username</label>
+                <input id="createUsername" autocomplete="username" maxlength="40" placeholder="Choose a username">
+
+                <label for="createPassword">Password</label>
+                <input id="createPassword" autocomplete="new-password" type="password" placeholder="8-25 chars, number, special, capital">
+
+                <button id="createAccountButton" type="button">Create Account</button>
+            </div>
+
+            <div class="auth-card">
+                <h2>Login Existing</h2>
+                <label for="loginUsername">Username</label>
+                <input id="loginUsername" autocomplete="username" maxlength="40" placeholder="Existing username">
+
+                <label for="loginPassword">Password</label>
+                <input id="loginPassword" autocomplete="current-password" type="password" placeholder="Your password">
+
+                <button id="loginButton" type="button">Login</button>
+            </div>
+        </div>
+        <p id="loginStatus"></p>
+    </section>
+
+    <!-- Unlocked messenger: side-panel selection plus chat traffic and composer. -->
+    <section id="appPanel" class="hidden">
+        <div class="layout">
+            <aside>
+                <h2>Recipients</h2>
+                <div id="userList" class="panel">Login to see known users.</div>
+
+                <h2>Groups</h2>
+                <label for="groupName">Group name</label>
+                <input id="groupName" autocomplete="off" placeholder="Example: Command Team">
+                <div class="side-actions">
+                    <button id="createGroupButton" class="secondary-button" type="button">Create From Selected</button>
+                    <button id="showAllMessagesButton" class="secondary-button" type="button">Show All Messages</button>
+                </div>
+                <div id="activeFilter" class="filter-pill">History: All</div>
+                <div id="groupList" class="panel">No groups yet.</div>
+            </aside>
+
+            <main>
+                <div class="chat-header">
+                    <h2>Message Traffic</h2>
+                    <div id="chatContext" class="filter-pill">Select a user, group, or enter multiple recipients.</div>
+                </div>
+
+                <div id="messages"></div>
+
+                <div class="composer">
+                    <label for="recipient">Send to</label>
+                    <input id="recipient" autocomplete="off" placeholder="Pick users or type names separated by commas">
+
+                    <div class="check-row">
+                        <input id="hideRecipients" type="checkbox">
+                        <label for="hideRecipients">Hide recipient list from recipients</label>
+                    </div>
+
+                    <label for="message">Message</label>
+                    <textarea id="message" placeholder="Type message"></textarea>
+
+                    <button id="sendButton" type="button">Send</button>
+                    <p id="status"></p>
+                </div>
+            </main>
+        </div>
+    </section>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
